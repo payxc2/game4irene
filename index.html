@@ -25,7 +25,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 核心修复：使用 dvh 适应手机动态高度 */
             height: 100vh;
             height: 100dvh; 
             margin: 0;
@@ -181,7 +180,6 @@
         }
         .victory-logo { width: 0; opacity: 0; transition: all 1s; }
         
-        /* 这里的文字已修改 */
         .victory-text { 
             color: #f8b500; font-size: 24px; font-weight: bold; 
             text-shadow: 3px 3px 0 #3b4cca; margin-top: 20px; 
@@ -227,6 +225,11 @@
     </div>
 </div>
 
+<audio id="bgm" loop>
+    <source src="TU_MUSICA.mp4" type="video/mp4">
+    Tu navegador no soporta el elemento de audio.
+</audio>
+
 <script>
     let fanHealth = 100;
     let noClickCount = 0;
@@ -236,7 +239,17 @@
     const menu = document.getElementById('menu');
     const noBtn = document.getElementById('noBtn');
     
+    // Referencia al audio
+    const bgm = document.getElementById('bgm');
+
     function startGame() {
+        // --- 1. Iniciar música aquí para evitar bloqueo del navegador ---
+        // Ponemos el volumen un poco bajo (0.4 = 40%) para que no asuste
+        bgm.volume = 0.4;
+        bgm.play().catch(error => {
+            console.log("No se pudo reproducir el audio automáticamente (esperando interacción):", error);
+        });
+
         document.getElementById('intro-screen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('intro-screen').style.display = 'none';
@@ -299,7 +312,6 @@
         updateHP(100);
         fanSprite.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-40px)' }, { transform: 'translateY(0)' }], 500);
         
-        // 修改部分 2：对话也改了
         dialogue.innerHTML = "¡Genial! ¡Tienes mi corazón! 🎉<br>Te quiero, Irene. ❤️";
         
         showVictory();
