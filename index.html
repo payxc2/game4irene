@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pokémon: Edición Amor</title>
+    <style>
+        :root {
+            --bg-color: #f8f8d0;
+            --hp-green: #48c048;
+            --hp-yellow: #f8e030;
+            --hp-red: #f85838;
+            --dialogue-bg: #222;
+            --dialogue-text: #fff;
+            --pikachu-yellow: #f8b500;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* 核心修复：使用 dvh 适应手机动态高度 */
+            height: 100vh;
+            height: 100dvh; 
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 4 / 3; 
+            background-color: var(--bg-color);
+            position: relative;
+            border: 4px solid #dcdcdc;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 手机竖屏强制适配 --- */
+        @media (max-width: 600px) {
+            #game-container {
+                width: 100vw;
+                height: 100vh;
+                height: 100dvh;
+                max-width: 100%;
+                aspect-ratio: unset;
+                border: none;
+            }
+            
+            .battle-scene {
+                height: 60% !important;
+                flex: none !important; 
+            }
+            
+            .dialogue-wrapper {
+                height: 40% !important;
+                flex: none !important;
+                padding: 15px 15px 30px 15px !important;
+            }
+
+            .stats-box { transform: scale(0.8); }
+            #fan-stats { transform-origin: top left; top: 10px !important; left: 10px !important; }
+            #irene-stats { transform-origin: bottom right; bottom: 10px !important; right: 10px !important; }
+            
+            #fan-sprite { width: 100px !important; height: 100px !important; top: 15% !important; right: 5% !important; }
+            #irene-sprite { width: 120px !important; height: 120px !important; bottom: 0 !important; left: 5% !important; }
+
+            .text-area { 
+                font-size: 16px !important; 
+                height: 40% !important;
+                overflow-y: auto; 
+            }
+            .action-menu { 
+                height: 50% !important;
+                align-items: start;
+                gap: 8px !important;
+            }
+            .btn { padding: 12px 0 !important; font-size: 18px !important; }
+        }
+
+        /* --- 1. 开场界面 --- */
+        #intro-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #ffde00 0%, #3b4cca 100%);
+            z-index: 100; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            transition: opacity 0.8s;
+        }
+        .logo-img { width: 70%; max-width: 400px; margin-bottom: 30px; animation: bounce 2s infinite; }
+        .start-btn {
+            background: #fff; border: 4px solid #3b4cca; padding: 15px 40px;
+            font-size: 24px; font-weight: bold; color: #3b4cca; border-radius: 50px;
+            text-transform: uppercase; cursor: pointer;
+        }
+
+        /* --- 2. 战斗场景 --- */
+        .battle-scene {
+            flex: 2;
+            position: relative;
+            background: linear-gradient(to bottom, #8ecafc 0%, #8ecafc 65%, #5cb878 65%, #5cb878 100%);
+            opacity: 0; transition: opacity 0.5s;
+            overflow: hidden;
+        }
+        .battle-scene.visible { opacity: 1; }
+
+        /* 角色 */
+        #fan-sprite {
+            position: absolute; top: 40px; right: 50px; width: 130px; height: 130px;
+            background-image: url('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/25.gif');
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            z-index: 2; transition: transform 0.2s;
+        }
+        #irene-sprite {
+            position: absolute; bottom: 0; left: 40px; width: 150px; height: 150px;
+            background-image: url('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/back/39.gif');
+            background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+            z-index: 2;
+        }
+        
+        #fan-sprite.broken-sprite {
+             background-image: url('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/substitute.png');
+            animation: shatter 0.8s forwards; filter: grayscale(80%) contrast(150%) brightness(0.7);
+        }
+        @keyframes shatter { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+
+        /* 状态栏 */
+        .stats-box {
+            position: absolute; background: #f8f8d8; border: 3px solid #404040;
+            padding: 6px 10px; border-radius: 5px 5px 15px 5px; min-width: 130px;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.15); z-index: 10;
+        }
+        #fan-stats { top: 20px; left: 20px; }
+        #irene-stats { bottom: 20px; right: 20px; }
+        .name-text { font-weight: bold; font-size: 16px; text-transform: uppercase; color: #333;}
+        .hp-container { background: #505050; border-radius: 10px; height: 10px; margin-top: 5px; border: 1px solid #fff; }
+        .hp-bar { height: 100%; width: 100%; background-color: var(--hp-green); border-radius: 8px; transition: width 0.4s, background-color 0.3s; }
+
+        /* --- 3. 对话框 --- */
+        .dialogue-wrapper {
+            flex: 1;
+            background: var(--dialogue-bg);
+            border-top: 5px solid var(--pikachu-yellow);
+            padding: 20px;
+            color: var(--dialogue-text);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .dialogue-wrapper.visible { opacity: 1; }
+
+        .text-area { font-size: 20px; line-height: 1.3; height: 50%; }
+        
+        .action-menu { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; 
+            height: auto; margin-top: 10px;
+        }
+        .btn {
+            background: #fff; border: 3px solid #aaa; border-radius: 8px;
+            font-size: 18px; font-weight: bold; padding: 12px 0; cursor: pointer;
+            text-transform: uppercase; box-shadow: 2px 2px 0 #888;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #888; }
+        .btn-yes { border-left: 6px solid #48c048; color: #2c5735; }
+        .btn-no { border-left: 6px solid #f85838; color: #c41e3a; }
+        .btn.broken { background: #555; color: #999; border-color: #444; box-shadow: none; pointer-events: none; text-decoration: line-through; }
+
+        /* 胜利覆盖层 */
+        #victory-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50;
+        }
+        .victory-logo { width: 0; opacity: 0; transition: all 1s; }
+        
+        /* 这里的文字已修改 */
+        .victory-text { 
+            color: #f8b500; font-size: 24px; font-weight: bold; 
+            text-shadow: 3px 3px 0 #3b4cca; margin-top: 20px; 
+            opacity: 0; transition: opacity 1s 0.5s; text-align: center; 
+        }
+
+        .shake { animation: shake 0.5s both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-3px, 0, 0); } 20%, 80% { transform: translate3d(6px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-9px, 0, 0); } 40%, 60% { transform: translate3d(9px, 0, 0); } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="intro-screen">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg" class="logo-img">
+        <button class="start-btn" onclick="startGame()">PLAY</button>
+    </div>
+
+    <div class="battle-scene" id="battleScene">
+        <div id="victory-overlay">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg" class="victory-logo" id="endLogo">
+            <div class="victory-text">¡HAS GANADO MI CORAZÓN!</div>
+        </div>
+        <div class="stats-box" id="fan-stats">
+            <div class="name-text">FAN</div>
+            <div class="hp-container"><div class="hp-bar" id="fanHP"></div></div>
+        </div>
+        <div id="fan-sprite"></div>
+        <div class="stats-box" id="irene-stats">
+            <div class="name-text">IRENE</div>
+            <div class="hp-container"><div class="hp-bar" style="width: 100%; background-color: #48c048;"></div></div>
+        </div>
+        <div id="irene-sprite"></div>
+    </div>
+
+    <div class="dialogue-wrapper" id="dialogueBox">
+        <div class="text-area" id="dialogue">...</div>
+        <div class="action-menu" id="menu" style="display: none;">
+            <button class="btn btn-yes" onclick="chooseYes()">¡SÍ! ❤️</button>
+            <button class="btn btn-no" id="noBtn" onclick="chooseNo()">No... 😢</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let fanHealth = 100;
+    let noClickCount = 0;
+    const fanHpBar = document.getElementById('fanHP');
+    const fanSprite = document.getElementById('fan-sprite');
+    const dialogue = document.getElementById('dialogue');
+    const menu = document.getElementById('menu');
+    const noBtn = document.getElementById('noBtn');
+    
+    function startGame() {
+        document.getElementById('intro-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('battleScene').classList.add('visible');
+            document.getElementById('dialogueBox').classList.add('visible');
+            startDialogue();
+        }, 800);
+    }
+
+    function startDialogue() {
+        typeWriter("¡Un FAN salvaje te está mirando fijamente!", () => {
+            setTimeout(() => {
+                typeWriter("FAN quiere hacerte una pregunta importante...", () => {
+                    setTimeout(() => {
+                        dialogue.innerHTML = "Fan:<br><b>'Irene, ¿quieres salir conmigo a solas?'</b>";
+                        menu.style.display = 'grid';
+                    }, 1500);
+                });
+            }, 1500);
+        });
+    }
+
+    function typeWriter(text, callback) {
+        dialogue.innerHTML = "";
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                dialogue.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(type, 30);
+            } else {
+                if(callback) callback();
+            }
+        }
+        type();
+    }
+
+    function chooseNo() {
+        noClickCount++;
+        fanHealth -= 34;
+        if (fanHealth <= 0) {
+            fanHealth = 0;
+            fanSprite.classList.add('broken-sprite');
+            dialogue.innerHTML = "¡El corazón de Fan se ha roto! 💔<br>Ya no puedes negarte.";
+            noBtn.innerHTML = "¡ROTO!"; 
+            noBtn.classList.add('broken');
+            noBtn.onclick = null;
+        } else {
+            fanSprite.classList.add('shake');
+            setTimeout(() => fanSprite.classList.remove('shake'), 500);
+            if (noClickCount === 1) dialogue.innerHTML = "¡Irene usó RECHAZO!<br>¡Es súper efectivo!";
+            else dialogue.innerHTML = "¡El HP de Fan está en rojo!<br>¡Ten cuidado!";
+        }
+        updateHP(fanHealth);
+    }
+
+    function chooseYes() {
+        menu.style.display = 'none';
+        fanSprite.classList.remove('broken-sprite');
+        updateHP(100);
+        fanSprite.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-40px)' }, { transform: 'translateY(0)' }], 500);
+        
+        // 修改部分 2：对话也改了
+        dialogue.innerHTML = "¡Genial! ¡Tienes mi corazón! 🎉<br>Te quiero, Irene. ❤️";
+        
+        showVictory();
+        createHearts();
+    }
+
+    function showVictory() {
+        const overlay = document.getElementById('victory-overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+            document.getElementById('endLogo').style.width = '80%';
+            document.getElementById('endLogo').style.opacity = '1';
+            document.querySelector('.victory-text').style.opacity = '1';
+        }, 100);
+    }
+
+    function updateHP(value) {
+        fanHpBar.style.width = value + '%';
+        fanHpBar.style.backgroundColor = value > 50 ? 'var(--hp-green)' : (value > 20 ? 'var(--hp-yellow)' : 'var(--hp-red)');
+    }
+
+    function createHearts() {
+        setInterval(() => {
+            const heart = document.createElement('div');
+            heart.innerHTML = "❤️";
+            heart.style.position = "fixed";
+            heart.style.left = Math.random() * 100 + "vw";
+            heart.style.top = "100vh";
+            heart.style.fontSize = (Math.random() * 20 + 20) + "px";
+            heart.style.transition = "top 3s linear, opacity 3s";
+            heart.style.zIndex = "100";
+            document.body.appendChild(heart);
+            setTimeout(() => { heart.style.top = "-10vh"; heart.style.opacity = "0"; }, 100);
+            setTimeout(() => heart.remove(), 3000);
+        }, 400);
+    }
+</script>
+</body>
+</html>
